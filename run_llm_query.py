@@ -6,6 +6,9 @@ from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTex
 from langchain.vectorstores import Chroma
 from langchain.document_loaders import TextLoader
 
+from langchain.llms import OpenAI
+from langchain import PromptTemplate
+
 def get_data(url = 'https://en.wikipedia.org/wiki/Prime_Minister_of_the_United_Kingdom'):
     response = requests.get(url)
     soup = bs(response.content, 'html.parser')
@@ -47,4 +50,32 @@ if __name__ == '__main__':
     texts = main()
     db = set_embeddings(texts=texts)
 
+    users_question = "Who was the Prime Minister of the US in 2008?"
+
+    results = db.similarity_search(
+        query=users_question,
+        n_results=5
+    )
+
+    template = """ You are a chat bot who loves to help people! Given the following context
+    sections, answer the question using only the given context. If you are
+    unsure and the answer is not explicitly writting in the documentation,
+    say "Sorry, I don't know how to help with that."
+
+    Context sections:
+    {context}
+
+    Question:
+    {users_question}
+
+    Answer:
+    """
+    prompt = PromptTemplate(template=template, input_variables=[
+         "context", "users_question"]
+                             )
+    prompt_text = prompt.format(context = results, users_question = users_question)
+
+    llm = OpenAI()
+    output_text = llm(prompt_text)
+    print(output_text)
 
